@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "eu.ansvar/polish-competition-mcp",
+  "description": "Query UOKiK (Urzad Ochrony Konkurencji i Konsumentow — Polish Office of Competition and Consumer Protection) enforcement decisions, merger control cases, and sector enforcement",
+  "repository": {
+    "url": "https://github.com/Ansvar-Systems/polish-competition-mcp",
+    "source": "github"
+  },
+  "homepage": "https://ansvar.eu",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "keywords": [
+    "uokik",
+    "polish-competition",
+    "competition-law",
+    "poland",
+    "compliance",
+    "mcp",
+    "ansvar"
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@ansvar/polish-competition-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
