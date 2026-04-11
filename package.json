@@ -1,6 +1,6 @@
 {
   "name": "@ansvar/polish-competition-mcp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "mcpName": "eu.ansvar/polish-competition-mcp",
   "description": "UOKiK (Urzad Ochrony Konkurencji i Konsumentow — Polish Office of Competition and Consumer Protection) MCP server — enforcement decisions, merger control, and sector enforcement",
   "type": "module",
