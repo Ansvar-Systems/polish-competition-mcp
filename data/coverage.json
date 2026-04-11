@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "server": "eu.ansvar/polish-competition-mcp",
+  "last_updated": "2026-03-23",
+  "sources": [
+    {
+      "id": "uokik_mergers",
+      "name": "UOKiK Merger Control Decisions",
+      "url": "https://uokik.gov.pl/bip/koncentracje",
+      "record_count": 2823,
+      "coverage_start": "2004-01-01",
+      "coverage_end": "2026-03-23",
+      "completeness": "high",
+      "notes": "Comprehensive coverage of merger control decisions (koncentracje przedsiebiorstw) from BIP UOKiK. Includes Phase I clearances, Phase II reviews, and conditional/prohibited outcomes."
+    },
+    {
+      "id": "uokik_decisions",
+      "name": "UOKiK Enforcement Decisions",
+      "url": "https://decyzje.uokik.gov.pl/",
+      "record_count": 0,
+      "coverage_start": null,
+      "coverage_end": null,
+      "completeness": "none",
+      "notes": "Enforcement decisions (abuse of dominance, cartel, sector inquiries) are not yet ingested. The UOKiK antitrust portal uses a legacy Lotus Notes-based document management system that requires additional scraping work. Decisions are accessible as PDFs but structured data extraction is pending."
+    }
+  ],
+  "totals": {
+    "mergers": 2823,
+    "decisions": 0,
+    "sectors": 6
+  }
+}
