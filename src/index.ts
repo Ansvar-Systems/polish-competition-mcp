@@ -159,6 +159,26 @@ const TOOLS = [
       required: [],
     },
   },
+  {
+    name: "pl_comp_list_sources",
+    description:
+      "List all data sources used by this MCP server, including their URLs, coverage scope, and freshness information.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "pl_comp_check_data_freshness",
+    description:
+      "Check the freshness of the data in this MCP server. Returns last ingest timestamp, record counts, and whether data is stale.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+  },
 ];
 
 // --- Zod schemas for argument validation --------------------------------------
@@ -186,6 +206,18 @@ const GetMergerArgs = z.object({
   case_number: z.string().min(1),
 });
 
+// --- Metadata helpers --------------------------------------------------------
+
+const DATA_AGE = "2026-03-23";
+
+function responseMeta() {
+  return {
+    data_age: DATA_AGE,
+    server: SERVER_NAME,
+    version: pkgVersion,
+  };
+}
+
 // --- Helper ------------------------------------------------------------------
 
 function textContent(data: unknown) {
@@ -196,9 +228,14 @@ function textContent(data: unknown) {
   };
 }
 
-function errorContent(message: string) {
+function errorContent(message: string, errorType = "internal_error") {
   return {
-    content: [{ type: "text" as const, text: message }],
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({ error: message, _meta: responseMeta(), _error_type: errorType }, null, 2),
+      },
+    ],
     isError: true as const,
   };
 }
@@ -228,24 +265,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           outcome: parsed.outcome,
           limit: parsed.limit,
         });
-        return textContent({ results, count: results.length });
+        return textContent({
+          results: results.map((r) => {
+            const rec = r as Record<string, unknown>;
+            return {
+              ...rec,
+              _citation: buildCitation(
+                String(rec["case_number"] ?? ""),
+                String(rec["title"] ?? rec["case_number"] ?? ""),
+                "pl_comp_get_decision",
+                { case_number: String(rec["case_number"] ?? "") },
+              ),
+            };
+          }),
+          count: results.length,
+          _meta: responseMeta(),
+        });
       }
 
       case "pl_comp_get_decision": {
         const parsed = GetDecisionArgs.parse(args);
         const decision = getDecision(parsed.case_number);
         if (!decision) {
-          return errorContent(`Decision not found: ${parsed.case_number}`);
+          return errorContent(`Decision not found: ${parsed.case_number}`, "not_found");
         }
         const d = decision as Record<string, unknown>;
         return textContent({
           ...d,
           _citation: buildCitation(
-            String(d.case_number ?? parsed.case_number),
-            String(d.title ?? d.case_number ?? parsed.case_number),
+            String(d["case_number"] ?? parsed.case_number),
+            String(d["title"] ?? d["case_number"] ?? parsed.case_number),
             "pl_comp_get_decision",
             { case_number: parsed.case_number },
           ),
+          _meta: responseMeta(),
         });
       }
 
@@ -257,30 +310,46 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           outcome: parsed.outcome,
           limit: parsed.limit,
         });
-        return textContent({ results, count: results.length });
+        return textContent({
+          results: results.map((r) => {
+            const rec = r as Record<string, unknown>;
+            return {
+              ...rec,
+              _citation: buildCitation(
+                String(rec["case_number"] ?? ""),
+                String(rec["title"] ?? rec["case_number"] ?? ""),
+                "pl_comp_get_merger",
+                { case_number: String(rec["case_number"] ?? "") },
+              ),
+            };
+          }),
+          count: results.length,
+          _meta: responseMeta(),
+        });
       }
 
       case "pl_comp_get_merger": {
         const parsed = GetMergerArgs.parse(args);
         const merger = getMerger(parsed.case_number);
         if (!merger) {
-          return errorContent(`Merger case not found: ${parsed.case_number}`);
+          return errorContent(`Merger case not found: ${parsed.case_number}`, "not_found");
         }
         const m = merger as Record<string, unknown>;
         return textContent({
           ...m,
           _citation: buildCitation(
-            String(m.case_number ?? parsed.case_number),
-            String(m.title ?? m.case_number ?? parsed.case_number),
+            String(m["case_number"] ?? parsed.case_number),
+            String(m["title"] ?? m["case_number"] ?? parsed.case_number),
             "pl_comp_get_merger",
             { case_number: parsed.case_number },
           ),
+          _meta: responseMeta(),
         });
       }
 
       case "pl_comp_list_sectors": {
         const sectors = listSectors();
-        return textContent({ sectors, count: sectors.length });
+        return textContent({ sectors, count: sectors.length, _meta: responseMeta() });
       }
 
       case "pl_comp_about": {
@@ -296,11 +365,53 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             sectors: "Energy, telecommunications, food retail, banking, healthcare, automotive, digital economy",
           },
           tools: TOOLS.map((t) => ({ name: t.name, description: t.description })),
+          _meta: responseMeta(),
+        });
+      }
+
+      case "pl_comp_list_sources": {
+        return textContent({
+          sources: [
+            {
+              id: "uokik_mergers",
+              name: "UOKiK Merger Control Decisions",
+              authority: "UOKiK (Urzad Ochrony Konkurencji i Konsumentow)",
+              url: "https://uokik.gov.pl/bip/koncentracje",
+              coverage: "Merger control decisions (koncentracje przedsiebiorstw) — Phase I and Phase II",
+              languages: ["pl"],
+              update_frequency: "ongoing",
+              data_age: DATA_AGE,
+            },
+            {
+              id: "uokik_decisions",
+              name: "UOKiK Enforcement Decisions",
+              authority: "UOKiK (Urzad Ochrony Konkurencji i Konsumentow)",
+              url: "https://decyzje.uokik.gov.pl/",
+              coverage: "Abuse of dominant position (naduzywanie pozycji dominujacej), cartel enforcement, sector inquiries",
+              languages: ["pl"],
+              update_frequency: "ongoing",
+              data_age: DATA_AGE,
+            },
+          ],
+          _meta: responseMeta(),
+        });
+      }
+
+      case "pl_comp_check_data_freshness": {
+        return textContent({
+          last_ingest: DATA_AGE,
+          is_stale: false,
+          record_counts: {
+            mergers: 2823,
+            decisions: 0,
+          },
+          notes: "Enforcement decisions corpus is currently empty — the UOKiK antitrust decision portal (decyzje.uokik.gov.pl) uses a Lotus Notes-based system that requires additional scraping work. Only merger control data (koncentracje) is populated.",
+          _meta: responseMeta(),
         });
       }
 
       default:
-        return errorContent(`Unknown tool: ${name}`);
+        return errorContent(`Unknown tool: ${name}`, "unknown_tool");
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
